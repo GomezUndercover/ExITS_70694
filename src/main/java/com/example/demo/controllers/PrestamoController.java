@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/prestamos")
@@ -43,15 +44,32 @@ public class PrestamoController {
             Persona persona = personaService.findById(personaId)
                     .orElseThrow(() -> new IllegalArgumentException("Persona no encontrada"));
 
-            List<Prestamo> prestamos = new ArrayList<>();
+
+            List<Prestamo> prestamosActivos = prestamoService.findPrestamosActivos(persona);
+            List<Long> librosPrestados = prestamosActivos.stream()
+                    .map(prestamo -> prestamo.getLibro().getId())
+                    .collect(Collectors.toList());
+
+            List<Prestamo> nuevosPrestamos = new ArrayList<>();
             for (Integer id : libroIds) {
-                Libro libro = libroService.findById(id.longValue())
+                Long libroId = id.longValue();
+
+                if (librosPrestados.contains(libroId)) {
+                    throw new IllegalStateException("La persona ya tiene prestado el libro con ID: " + libroId);
+                }
+
+                Libro libro = libroService.findById(libroId)
                         .orElseThrow(() -> new IllegalArgumentException("Libro no encontrado con id: " + id));
+
+                if (!libro.getDisponible()) {
+                    throw new IllegalStateException("El libro con ID " + libroId + " no está disponible");
+                }
+
                 Prestamo prestamo = prestamoService.prestarLibro(persona, libro);
-                prestamos.add(prestamo);
+                nuevosPrestamos.add(prestamo);
             }
 
-            return new ResponseEntity<>(prestamos, HttpStatus.CREATED);
+            return new ResponseEntity<>(nuevosPrestamos, HttpStatus.CREATED);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (IllegalStateException e) {

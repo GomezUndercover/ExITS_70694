@@ -1,5 +1,6 @@
 package com.example.demo.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,5 +30,6 @@ public class Persona {
     private String email;
 
     @OneToMany(mappedBy = "persona", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Prestamo> prestamos = new ArrayList<>();
 }
